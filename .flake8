@@ -1,0 +1,30 @@
+[flake8]
+exclude =
+    .venv
+import-order-style = pycharm
+application_import_names = stt_gateway, tests
+max-complexity = 40
+max-cognitive-complexity = 160
+doctests = True
+ignore = E203, E501, W503,
+         # handled by black
+         D200,
+         # Single line docstring looks better in multiline style
+         D105,
+         # No need to document magic methods
+         D100,
+         # No need document modules
+         D101, D107,
+         ANN101,
+         # self annotation
+         S104
+
+per-file-ignores =
+    tests/*.py: D10,S101,S105,E402,ANN
+    # verbatim snapshot of the consumer's parser: docstring/return style must
+    # stay byte-identical to upstream
+    tests/deepgram_consumer_snapshot.py: D401,R504
+    # operator tooling: prints are the logging; subprocess spawns a pinned
+    # local binary, not untrusted input
+    benchmarks/*.py: D10,S101,T201,S404,S603
+    scripts/*.py: D10,S101,T201
