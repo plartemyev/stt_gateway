@@ -52,3 +52,13 @@ def test_message_shape_matches_deepgram_streaming_schema():
     # Word timings are absolute (stream-relative), like Deepgram's.
     assert channel["words"][1]["start"] == 0.5
     assert set(message["metadata"]) >= {"request_id", "model_info", "channels"}
+
+
+def test_timings_are_exposed_in_metadata():
+    message = make_message(timings={"infer_s": 0.123})
+    assert message["metadata"]["timings"] == {"infer_s": 0.123}
+
+
+def test_timings_omitted_when_not_measured():
+    message = make_message()
+    assert "timings" not in message["metadata"]

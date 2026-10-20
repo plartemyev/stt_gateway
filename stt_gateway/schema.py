@@ -59,8 +59,13 @@ def results_message(
         model_name: str,
         is_final: bool = True,
         speech_final: bool = True,
+        timings: dict | None = None,
 ) -> dict:
-    """Build a Deepgram streaming `Results` message."""
+    """Build a Deepgram streaming `Results` message.
+
+    `timings`, when given, is merged into `metadata` (non-standard extension
+    carrying gateway-side latency measurements, e.g. {"infer_s": 0.123}).
+    """
     confidence = statistics.fmean(w.confidence for w in words) if words else 0.0
     alternative_words = [
         {
@@ -74,6 +79,14 @@ def results_message(
         }
         for word in words
     ]
+    metadata = {
+        "request_id": str(uuid.uuid4()),
+        "model_info": {"name": model_name, "version": "", "arch": "whisper"},
+        "channels": channels,
+        "language": language,
+    }
+    if timings:
+        metadata["timings"] = timings
     return {
         "type": "Results",
         "channel_index": [0, channels],
@@ -91,10 +104,5 @@ def results_message(
                 }
             ],
         },
-        "metadata": {
-            "request_id": str(uuid.uuid4()),
-            "model_info": {"name": model_name, "version": "", "arch": "whisper"},
-            "channels": channels,
-            "language": language,
-        },
+        "metadata": metadata,
     }

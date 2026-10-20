@@ -15,6 +15,7 @@ import io
 import logging
 import os
 import signal
+import time
 import wave
 from collections.abc import AsyncIterator
 from dataclasses import asdict
@@ -24,7 +25,7 @@ import numpy as np
 import uvicorn
 from starlette.websockets import WebSocketDisconnect
 
-from stt_gateway import auth, schema
+from stt_gateway import auth, log, schema
 from stt_gateway.audio import AudioDecodingError, ContainerDecoder, Linear16Decoder, TARGET_RATE
 from stt_gateway.config import Settings, load_settings
 from stt_gateway.engine import EngineError
@@ -153,14 +154,18 @@ async def listen(websocket: fastapi.WebSocket) -> None:
         await websocket.close(code=1008, reason="invalid or missing token")
         return
     try:
-        encoding, sample_rate, channels, language, model, punctuate = _parse_query(websocket.query_params)
+        encoding, sample_rate, channels, language, model, punctuate, session = _parse_query(websocket.query_params)
     except ValueError as e:
         await websocket.close(code=1008, reason=str(e))
         return
     routing: RoutingConfig = websocket.app.state.routing
     engine: Engine = websocket.app.state.engines[routing.resolve(model, language)]
 
-    session = _Session(settings, encoding, sample_rate, channels)
+    if session:
+        # Propagate the consumer's session id (master_backend appends it) so
+        # gateway logs join with the rest of the pipeline.
+        log.set_trace_id(session)
+    session_state = _Session(settings, encoding, sample_rate, channels)
     await websocket.accept()
     logger.info("Session opened: encoding=%s sample_rate=%s channels=%s language=%s model=%s engine=%s",
                 encoding, sample_rate, channels, language, model or "(default)", engine.name)
@@ -170,7 +175,7 @@ async def listen(websocket: fastapi.WebSocket) -> None:
     ))
     try:
         try:
-            await _run_session(websocket, session, engine, language, punctuate)
+            await _run_session(websocket, session_state, engine, language, punctuate)
         except* (EngineError, AudioDecodingError) as group:
             error = group.exceptions[0]
             logger.warning("Session failed: %s", error)
@@ -180,13 +185,16 @@ async def listen(websocket: fastapi.WebSocket) -> None:
     except WebSocketDisconnect:
         pass
     finally:
-        session.close()
+        session_state.close()
         logger.info("Session closed; buffered=%.1fs dropped=%.1fs",
-                    session.windower.buffered_seconds, session.windower.dropped_seconds)
+                    session_state.windower.buffered_seconds, session_state.windower.dropped_seconds)
 
 
-def _parse_query(query) -> tuple[str, int, int, str, str, bool]:
-    """Map Deepgram query parameters onto internal session settings."""
+def _parse_query(query) -> tuple[str, int, int, str, str, bool, str]:
+    """Map Deepgram query parameters onto internal session settings.
+
+    `session` is a non-Deepgram extension: an opaque trace id from the caller.
+    """
     encoding = query.get("encoding", ENCODING_OGG_OPUS)
     if encoding not in (ENCODING_OGG_OPUS, ENCODING_LINEAR16):
         raise ValueError(f"unsupported encoding: {encoding}")
@@ -197,7 +205,8 @@ def _parse_query(query) -> tuple[str, int, int, str, str, bool]:
         raise ValueError(f"unsupported language, supported: {SUPPORTED_LANGUAGES}")
     model = (query.get("model") or "").strip().lower()
     punctuate = query.get("punctuate", "true").lower() not in ("false", "0", "no")
-    return encoding, sample_rate, channels, language, model, punctuate
+    session = (query.get("session") or "").strip()
+    return encoding, sample_rate, channels, language, model, punctuate, session
 
 
 def _punctuate(transcript: str, utterance_end: bool, punctuate: bool) -> str:
@@ -251,7 +260,12 @@ async def _run_session(
             window = session.windower.pop_window()
             if window is None:
                 continue
+            t_infer = time.perf_counter()
             transcription = await engine.transcribe(encode_wav(window.samples), language)
+            infer_s = time.perf_counter() - t_infer
+            logger.info("window=[%.2f,%.2f]s utterance_end=%s words=%d infer_s=%.3f",
+                        window.start_seconds, window.end_seconds, window.utterance_end,
+                        len(transcription.words), infer_s)
             transcript = _punctuate(transcription.text, window.utterance_end, punctuate)
             words = [
                 schema.Word(
@@ -270,6 +284,7 @@ async def _run_session(
                 duration=window.end_seconds - window.start_seconds,
                 channels=session.channels,
                 model_name=engine.name,
+                timings={"infer_s": round(infer_s, 3)},
             )
             await websocket.send_json(message)
 
@@ -285,10 +300,7 @@ async def _close_quietly(websocket: fastapi.WebSocket, code: int, reason: str) -
 
 def main() -> None:
     """Run the gateway with uvicorn (container entrypoint)."""
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-    )
+    log.setup_logging()
     settings = load_settings()
     uvicorn.run(
         app,
