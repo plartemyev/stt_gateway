@@ -71,7 +71,7 @@ of engine quirks.
 | `STT_TOKEN_MAX_LEN` | `256` | token length cap |
 | `STT_ROUTING_CONFIG` | *(built-in)* | JSON file replacing the engine routing table |
 | `STT_MODELS_DIR` | `/models` | where whisper ggml files live (auto-downloaded) |
-| `STT_VAD` / `STT_VAD_MODEL` | `1` / `ggml-silero-v5.1.2.bin` | Silero VAD for whisper-server |
+| `STT_VAD` / `STT_VAD_MODEL` | `1` / `ggml-silero-v6.2.0.bin` | Silero VAD for whisper-server |
 | `HF_TOKEN` | *(unset)* | HuggingFace token for model downloads (rate limits) |
 | `STT_WINDOW_SECONDS` | `4.0` | transcription window length |
 | `STT_FLUSH_SILENCE_SECONDS` | `1.2` | trailing silence that flushes a short window |
@@ -92,7 +92,8 @@ poetry run pytest
 poetry run python -m stt_gateway.server
 ```
 
-Docker (Arch Linux + CUDA, GPU pinning optional):
+Docker (Arch Linux + CUDA 13, NVIDIA driver >= 580 required, GPU pinning
+optional):
 
 ```bash
 docker build -t stt_gateway stt_gateway/

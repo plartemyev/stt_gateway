@@ -178,7 +178,7 @@ def spawn_engine(models_dir: str, model: str, port: int, vad: bool) -> subproces
         "--inference-path", "/inference",
     ]
     if vad:
-        command += ["--vad", "--vad-model", str(models / "ggml-silero-v5.1.2.bin")]
+        command += ["--vad", "--vad-model", str(models / "ggml-silero-v6.2.0.bin")]
     print(f"starting: {' '.join(command)}", file=sys.stderr)
     return subprocess.Popen(command, stdout=sys.stderr, stderr=sys.stderr)
 

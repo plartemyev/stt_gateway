@@ -8,8 +8,8 @@ host with Docker and the NVIDIA container runtime (measured on RTX 3090).
 
 | model | path | notes |
 |---|---|---|
-| `ggml-large-v3-turbo` | whisper.cpp, CUDA (production engine) | candidate default |
-| `ggml-large-v3` | whisper.cpp, CUDA | accuracy reference |
+| `ggml-large-v3-turbo` | whisper.cpp, CUDA | faster distilled candidate, benched |
+| `ggml-large-v3` | whisper.cpp, CUDA (production engine) | accuracy reference |
 | `seamless-m4t-v2-large` | HF transformers, in-process | open-weights multilingual reference (en/ru/hy); **CC-BY-NC weights** — benchmark only, never redistribute |
 | Google Chirp 2/3 | GCP STT API v2 only | skipped: no public weights, needs GCP credentials |
 

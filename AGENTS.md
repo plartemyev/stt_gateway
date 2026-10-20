@@ -3,16 +3,6 @@
 Deepgram-compatible streaming speech-to-text WebSocket gateway backed by
 whisper.cpp (CUDA) and SeamlessM4T v2. Published as GPL-2.0-only.
 
-## Project guidelines
-
-- Think before coding: state assumptions, surface tradeoffs, ask when
-  unclear.
-- Simplicity first: minimum code that solves the problem, nothing
-  speculative.
-- Surgical changes: touch only what the task requires; match existing style.
-- Goal-driven execution: turn tasks into verifiable goals (tests) and loop
-  until they pass.
-
 ## Tooling
 
 - Package management is **Poetry**: `poetry lock` / `poetry install --with dev`
@@ -23,6 +13,10 @@ whisper.cpp (CUDA) and SeamlessM4T v2. Published as GPL-2.0-only.
   `application_import_names = stt_gateway`; per-file-ignores cover
   `tests/*`, `benchmarks/*`, `scripts/*` — operator tooling uses
   prints-as-logging and pinned-binary subprocess calls).
+- Docker build uses the current Arch repo `cuda` (13.x) — no archive pins.
+  Both whisper.cpp (cu13 runtime) and torch cu13 wheels require
+  **NVIDIA driver >= 580** on the GPU host; do not reintroduce CUDA 12
+  pins for older drivers.
 
 ## Engine contract (whisper.cpp `whisper-server`, verified against sources)
 
@@ -53,7 +47,7 @@ whisper.cpp (CUDA) and SeamlessM4T v2. Published as GPL-2.0-only.
   first write to the pipe.
 - Silero VAD ggml model for whisper.cpp lives in the HF repo
   `ggml-org/whisper-vad` (NOT `ggml-org/whisper.cpp`):
-  `https://huggingface.co/ggml-org/whisper-vad/resolve/main/ggml-silero-v5.1.2.bin`.
+  `https://huggingface.co/ggml-org/whisper-vad/resolve/main/ggml-silero-v6.2.0.bin`.
 - Deepgram streaming WS messages carry the transcript at top-level
   `channel.alternatives[0].transcript` (unlike the prerecorded HTTP API,
   which nests under `results.channels`); the pinned consumer snapshot in

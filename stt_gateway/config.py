@@ -45,7 +45,7 @@ class Settings:
     engine_start_timeout_seconds: float = 300.0
     engine_external: bool = False  # true: connect to an already-running whisper-server
     vad: bool = True
-    vad_model: str = "ggml-silero-v5.1.2.bin"
+    vad_model: str = "ggml-silero-v6.2.0.bin"
     # Optional JSON file overriding the built-in engine routing table.
     routing_config: str = ""
 
@@ -86,7 +86,7 @@ def load_settings() -> Settings:
         engine_start_timeout_seconds=_env_float("STT_ENGINE_START_TIMEOUT", 300.0),
         engine_external=_env_bool("STT_ENGINE_EXTERNAL", False),
         vad=_env_bool("STT_VAD", True),
-        vad_model=_env_str("STT_VAD_MODEL", "ggml-silero-v5.1.2.bin"),
+        vad_model=_env_str("STT_VAD_MODEL", "ggml-silero-v6.2.0.bin"),
         routing_config=_env_str("STT_ROUTING_CONFIG", ""),
         sample_rate=_env_int("STT_SAMPLE_RATE", 16_000),
         window_seconds=_env_float("STT_WINDOW_SECONDS", 4.0),

@@ -5,7 +5,7 @@ set -eu
 
 MODELS_DIR="${STT_MODELS_DIR:-/models}"
 WHISPER_HF_BASE="${STT_MODEL_HF_BASE:-https://huggingface.co/ggerganov/whisper.cpp/resolve/main}"
-VAD_MODEL="${STT_VAD_MODEL:-ggml-silero-v5.1.2.bin}"
+VAD_MODEL="${STT_VAD_MODEL:-ggml-silero-v6.2.0.bin}"
 VAD_HF_BASE="${STT_VAD_MODEL_HF_BASE:-https://huggingface.co/ggml-org/whisper-vad/resolve/main}"
 
 download_curl() {
